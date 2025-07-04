@@ -76,19 +76,19 @@ class CameraSettings {
 
 /// API 호출 서비스
 class ApiService {
-  static const String apiUrl = 'https://your-api-endpoint.com/camera-settings';
+  static const String apiUrl = 'http://10.0.2.2:3000/agent-conversation';
 
   static Future<CameraSettings?> getCameraSettings(
       String requirement) async {
     final response = await http.post(
       Uri.parse(apiUrl),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'requirement': requirement}),
+      body: jsonEncode({'message': requirement}),
     );
     if (response.statusCode == 200) {
       return CameraSettings.fromJson(jsonDecode(response.body));
     }
-    throw Exception('API 요청 실패: ${response.statusCode}');
+    throw Exception('API 요청 실패: ${response.body}');
   }
 
   /// 테스트용 Mock

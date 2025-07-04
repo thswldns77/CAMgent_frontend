@@ -49,7 +49,7 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
 
   Future<void> _runReq(Requirement r) async {
     setState(() => _busy = true);
-    final s = await ApiService.getMockCameraSettings(
+    final s = await ApiService.getCameraSettings(
         '${r.title} ${r.description}');
     widget.onSettingsReceived(s!);
     if (mounted) {
