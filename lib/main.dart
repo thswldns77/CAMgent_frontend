@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'package:camgent/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -7,10 +8,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'camera_settings.dart';
 import 'requirements_screen.dart';
 import 'camera_screen.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _requestPermissions();
+  await _requestAllPermissions();
   List<CameraDescription> cams;
   try {
     cams = await availableCameras();
@@ -20,9 +24,23 @@ Future<void> main() async {
   runApp(MyApp(cameras: cams));
 }
 
-Future<void> _requestPermissions() async {
-  await Permission.camera.request();
-  await Permission.storage.request();
+Future<void> _requestAllPermissions() async {
+  final perms = <Permission>[
+    Permission.camera,
+    Permission.storage,
+    Permission.photos,                 // iOS 사진 읽기
+    Permission.photosAddOnly,          // iOS14+ 사진 추가 전용
+    Permission.microphone,             // 음성 녹화
+  ];
+
+  // Android 11+ (API 30+) 관리형 저장소 권한 추가
+  if (Platform.isAndroid) {
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    final sdkInt = androidInfo.version.sdkInt ?? 0;
+    if (sdkInt >= 30) {
+      perms.add(Permission.manageExternalStorage);
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -58,7 +76,7 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          RequirementsScreen(onSettingsReceived: (s) {
+          ChatScreen(onSettingsReceived: (s) {
             setState(() {
               _cameraSettings = s;
               _currentIndex = 1;

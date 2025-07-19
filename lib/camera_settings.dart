@@ -15,8 +15,8 @@ class CameraSettings {
   final bool? controlAwbLock;
   final bool? controlAeLock;
   final String? flashMode;
-  final List<int>? controlAfRegions;
-  final List<int>? controlAeRegions;
+  final String? controlAfRegions;
+  final String? controlAeRegions;
   final String? controlEffectMode;
   final String? noiseReductionMode;
   final String? tonemapMode;
@@ -60,8 +60,8 @@ class CameraSettings {
       controlAwbLock: json['CONTROL_AWB_LOCK'],
       controlAeLock: json['CONTROL_AE_LOCK'],
       flashMode: json['FLASH_MODE'],
-      controlAfRegions: json['CONTROL_AF_REGIONS']?.cast<int>(),
-      controlAeRegions: json['CONTROL_AE_REGIONS']?.cast<int>(),
+      controlAfRegions: json['CONTROL_AF_REGIONS'],
+      controlAeRegions: json['CONTROL_AE_REGIONS'],
       controlEffectMode: json['CONTROL_EFFECT_MODE'],
       noiseReductionMode: json['NOISE_REDUCTION_MODE'],
       tonemapMode: json['TONEMAP_MODE'],
@@ -95,25 +95,50 @@ class ApiService {
   static Future<CameraSettings?> getMockCameraSettings(
       String requirement) async {
     await Future.delayed(const Duration(seconds: 2));
-    if (requirement.contains('밝게')) {
+
+    final lowerReq = requirement.toLowerCase();
+
+    if (lowerReq.contains('밝게') || lowerReq.contains('밝은')) {
       return CameraSettings(
         sensorSensitivity: 800,
         sensorExposureTime: 0.033,
         controlAeExposureCompensation: 1.0,
         flashMode: 'AUTO',
         jpegQuality: 95,
+        controlSceneMode: 'AUTO',
       );
-    } else if (requirement.contains('어둡게')) {
+    } else if (lowerReq.contains('어둡게') || lowerReq.contains('어두운')) {
       return CameraSettings(
         sensorSensitivity: 100,
         sensorExposureTime: 0.008,
         controlAeExposureCompensation: -1.0,
         flashMode: 'OFF',
         jpegQuality: 85,
+        controlSceneMode: 'AUTO',
+      );
+    } else if (lowerReq.contains('인물') || lowerReq.contains('사람')) {
+      return CameraSettings(
+        sensorSensitivity: 200,
+        sensorExposureTime: 0.008,
+        controlAeExposureCompensation: 0.0,
+        flashMode: 'AUTO',
+        jpegQuality: 95,
+        controlSceneMode: 'PORTRAIT',
+      );
+    } else if (lowerReq.contains('야경') || lowerReq.contains('밤')) {
+      return CameraSettings(
+        sensorSensitivity: 1600,
+        sensorExposureTime: 0.066,
+        controlAeExposureCompensation: 0.0,
+        flashMode: 'OFF',
+        jpegQuality: 90,
+        controlSceneMode: 'NIGHT',
       );
     }
+
     return CameraSettings(
       sensorSensitivity: 400,
+      sensorExposureTime: 0.008,
       jpegQuality: 90,
       controlSceneMode: 'AUTO',
       flashMode: 'AUTO',

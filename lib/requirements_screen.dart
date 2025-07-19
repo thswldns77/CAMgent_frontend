@@ -32,6 +32,7 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
   final _dCtrl = TextEditingController();
   bool _busy = false;
 
+
   void _addReq() {
     if (_tCtrl.text.isEmpty) return;
     setState(() {
@@ -49,7 +50,7 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
 
   Future<void> _runReq(Requirement r) async {
     setState(() => _busy = true);
-    final s = await ApiService.getCameraSettings(
+    final s = await ApiService.getMockCameraSettings(
         '${r.title} ${r.description}');
     widget.onSettingsReceived(s!);
     if (mounted) {
