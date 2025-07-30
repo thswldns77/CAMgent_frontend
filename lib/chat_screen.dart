@@ -1,5 +1,7 @@
 // lib/chat_screen.dart
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -7,6 +9,8 @@ import 'camera_settings.dart';
 
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'apiservice.dart';
+import 'dart:convert';
+
 
 class ChatScreen extends StatefulWidget {
   final Function(CameraSettings) onSettingsReceived;
@@ -23,12 +27,240 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   bool _isTyping = false;
+  String? _pendingImagePath;
 
   @override
   void initState() {
     super.initState();
     _addWelcomeMessage();
   }
+
+  // 메시지 제출 핸들러 모두 이 함수로 통합
+  void _sendMessage({required String text, String? imagePath}) {
+    if (text.trim().isEmpty && imagePath == null) return;
+
+    // 1) 사용자 메시지 추가
+    setState(() {
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        timestamp: DateTime.now(),
+        imagePath: imagePath,
+      ));
+    });
+    _scrollToBottom();
+
+    // 2) Agentica에 페이로드 전송
+    _sendToAgentica(text: text, imagePath: imagePath);
+  }
+
+  // Future<void> _sendToAgentica({  required String text,    String? imagePath,  }) async {
+  //   setState(() => _isTyping = true);
+  //
+  //   // base64 인코딩(이미지 있으면)
+  //   String? b64 = null;
+  //   if (imagePath != null) {
+  //     final bytes = await File(imagePath).readAsBytes();
+  //     b64 = base64Encode(bytes);
+  //   }
+  //
+  //   // Agentica 호출
+  //   final res = await ApiService.sendToAgentica(text, b64!);
+  //
+  //   // 지연
+  //   await Future.delayed(const Duration(milliseconds: 800));
+  //
+  //   // 봇 응답 추가
+  //
+  //   if(res.cameraSettings != null){
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: res.text,
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         cameraSettings: res.cameraSettings,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //     _scrollToBottom();
+  //   }else if(res.url != null){
+  //
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: "이런 숏츠 영상을 추천드려요!",
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         youtubeUrl: res.url,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //   }else if(res.b64 != null){
+  //     Uint8List bytes = base64Decode(b64);
+  //
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: "보정 완료",
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         imagePath: res.b64,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //   }else{
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: res.text,
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //     _scrollToBottom();
+  //   }
+  //
+  //
+  // }
+
+
+  // Future<void> _sendToAgentica({  required String text,    String? imagePath,  }) async {
+  //   setState(() => _isTyping = true);
+  //
+  //
+  //   // Agentica 호출
+  //   final res = await ApiService.sendToAgentica(text, imagePath!);
+  //
+  //   // 지연
+  //   await Future.delayed(const Duration(milliseconds: 800));
+  //
+  //   // 봇 응답 추가
+  //
+  //   if(res.cameraSettings != null){
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: res.text,
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         cameraSettings: res.cameraSettings,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //     _scrollToBottom();
+  //   }else if(res.url != null){
+  //
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: "이런 숏츠 영상을 추천드려요!",
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         youtubeUrl: res.url,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //   }else if(res.b64 != null){
+  //     Uint8List bytes = base64Decode(res.b64);
+  //
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: "보정 완료",
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //         image: bytes,
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //   }else{
+  //     setState(() {
+  //       _messages.add(ChatMessage(
+  //         text: res.text,
+  //         isUser: false,
+  //         timestamp: DateTime.now(),
+  //       ));
+  //       _isTyping = false;
+  //     });
+  //     _scrollToBottom();
+  //   }
+  //
+  //
+  // }
+// _sendToAgentica 함수 개선
+  Future<void> _sendToAgentica({
+    required String text,
+    String? imagePath,
+  }) async {
+    setState(() => _isTyping = true);
+
+    try {
+      // imagePath를 그대로 ApiService로 전달
+      final res = await ApiService.sendToAgentica(text, imagePath);
+
+      // 지연 시간 추가 (UX 개선)
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // 응답 처리
+      if (res.cameraSettings != null) {
+        // 카메라 설정 응답
+        _addBotMessage(
+          text: res.text,
+          cameraSettings: res.cameraSettings,
+        );
+      } else if (res.url != null && res.url!.isNotEmpty) {
+        // YouTube URL 응답
+        _addBotMessage(
+          text: "이런 숏츠 영상을 추천드려요!",
+          youtubeUrl: res.url,
+        );
+      } else if (res.b64 != null && res.b64!.isNotEmpty) {
+        // 보정된 이미지 응답
+        try {
+          final processedImageBytes = base64Decode(res.b64!);
+          _addBotMessage(
+            text: "보정 완료",
+            image: processedImageBytes,
+          );
+        } catch (e) {
+          print('이미지 디코딩 오류: $e');
+          _addBotMessage(text: "이미지 처리 중 오류가 발생했습니다.");
+        }
+      } else {
+        // 일반 텍스트 응답
+        _addBotMessage(text: res.text.isNotEmpty ? res.text : "응답을 받지 못했습니다.");
+      }
+    } catch (e) {
+      print('Agentica API 오류: $e');
+      _addBotMessage(
+        text: "죄송합니다. 서버와의 통신 중 오류가 발생했습니다. 다시 시도해 주세요.",
+      );
+    } finally {
+      // 항상 타이핑 상태 해제
+      if (mounted) {
+        setState(() => _isTyping = false);
+      }
+    }
+  }
+
+// 봇 메시지 추가를 위한 헬퍼 함수
+  void _addBotMessage({
+    required String text,
+    CameraSettings? cameraSettings,
+    String? youtubeUrl,
+    Uint8List? image,
+  }) {
+    if (mounted) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: text,
+          isUser: false,
+          timestamp: DateTime.now(),
+          cameraSettings: cameraSettings,
+          youtubeUrl: youtubeUrl,
+          image: image,
+        ));
+      });
+      _scrollToBottom();
+    }
+  }
+
+
 
   void _addWelcomeMessage() {
     _messages.add(ChatMessage(
@@ -76,21 +308,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // 이미지 메시지 전송
   void _sendImageMessage(XFile image) {
+
     setState(() {
-      _messages.add(ChatMessage(
-        text: "이런 스타일의 사진을 찍고 싶어요",
-        isUser: true,
-        timestamp: DateTime.now(),
-        imagePath: image.path,
-      ));
+      _pendingImagePath = image.path;
     });
-
-    _scrollToBottom();
-
-    // 이미지와 함께 전송된 경우 이미지 분석 함수 실행
-    _processImageInput(image.path);
   }
 
+
+  // 선택
   // 이미지 선택 다이얼로그 표시
   void _showImagePickerDialog() {
     showModalBottomSheet(
@@ -130,197 +355,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _handleSubmitted(String text) {
-    if (text.trim().isEmpty) return;
-
-    _textController.clear();
-
-    setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-    });
-
-    _scrollToBottom();
-
-    // 텍스트만 입력된 경우 일반 처리
-    _processUserInput(text);
-  }
-
-  // 이미지 분석 및 처리 함수 (사진이 첨부된 경우)
-  Future<void> _processImageInput(String imagePath) async {
-    // 1) 타이핑 상태 시작
-    setState(() => _isTyping = true);
-
-    // 2) 이미지 분석 (실제로는 AI 모델이나 서버로 분석)
-    final analysisResult = await ApiService.analyzeImage(imagePath);
-
-    // 3) 분석 결과를 바탕으로 응답 및 설정 생성
-    final response = _generateImageBasedResponse(analysisResult);
-    final settings = _extractImageBasedCameraSettings(analysisResult);
-
-    // 4) 지연 시간 추가
-    await Future.delayed(const Duration(milliseconds: 1200));
-
-    // 5) 채팅창에 봇 응답 추가 및 타이핑 상태 종료
-    setState(() {
-      _messages.add(ChatMessage(
-        text: response,
-        isUser: false,
-        timestamp: DateTime.now(),
-        cameraSettings: settings,
-      ));
-      _isTyping = false;
-    });
-
-    _scrollToBottom();
-  }
-
-
-  // 이미지 분석 결과 기반 응답 생성
-  String _generateImageBasedResponse(String analysisResult) {
-    switch (analysisResult) {
-      case 'portrait':
-        return "업로드해주신 사진을 분석한 결과, 인물 사진 스타일로 보입니다! 📸\n\n비슷한 느낌의 사진을 찍기 위한 설정을 준비했습니다:\n• 아웃포커싱 효과를 위한 낮은 F값\n• 자연스러운 피부톤 색감 조정\n• 얼굴 인식 AF 활성화\n• ISO 200으로 노이즈 최소화\n\n아래 버튼을 눌러 설정을 적용해보세요!";
-
-      case 'night':
-        return "업로드해주신 사진을 분석한 결과, 야간/저조도 사진 스타일로 보입니다! 🌃\n\n비슷한 분위기의 사진을 찍기 위한 설정을 준비했습니다:\n• 높은 ISO로 밝기 확보\n• 적절한 노출 시간 설정\n• 노이즈 감소 기능 활성화\n• 삼각대 사용 권장\n\n아래 버튼을 눌러 설정을 적용해보세요!";
-
-      case 'landscape':
-        return "업로드해주신 사진을 분석한 결과, 풍경 사진 스타일로 보입니다! 🏔️\n\n비슷한 느낌의 사진을 찍기 위한 설정을 준비했습니다:\n• 넓은 피사계 심도를 위한 높은 F값\n• 선명한 이미지를 위한 낮은 ISO\n• 풍경 모드 최적화\n• 화이트밸런스 자동 조정\n\n아래 버튼을 눌러 설정을 적용해보세요!";
-
-      case 'macro':
-        return "업로드해주신 사진을 분석한 결과, 접사/클로즈업 사진 스타일로 보입니다! 🔍\n\n비슷한 느낌의 사진을 찍기 위한 설정을 준비했습니다:\n• 매크로 모드 활성화\n• 높은 F값으로 피사계 심도 확보\n• 정확한 수동 포커스 모드\n• 충분한 조명 확보 설정\n\n아래 버튼을 눌러 설정을 적용해보세요!";
-
-      default:
-        return "업로드해주신 사진을 분석했습니다! 📷\n\n사진의 특성을 바탕으로 최적의 촬영 설정을 준비했습니다. 비슷한 느낌의 사진을 찍을 수 있도록 카메라 파라미터를 조정했습니다.\n\n아래 버튼을 눌러 설정을 적용해보세요!";
-    }
-  }
-
-  // 이미지 분석 결과 기반 카메라 설정 생성
-  CameraSettings _extractImageBasedCameraSettings(String analysisResult) {
-    switch (analysisResult) {
-      case 'portrait':
-        return CameraSettings(
-          sensorSensitivity: 200,
-          sensorExposureTime: 0.008,
-          controlAeExposureCompensation: 0.3,
-          flashMode: 'AUTO',
-          jpegQuality: 95,
-          controlSceneMode: 'PORTRAIT',
-        );
-
-      case 'night':
-        return CameraSettings(
-          sensorSensitivity: 1600,
-          sensorExposureTime: 0.1,
-          controlAeExposureCompensation: 0.0,
-          flashMode: 'OFF',
-          jpegQuality: 90,
-          controlSceneMode: 'NIGHT',
-        );
-
-      case 'landscape':
-        return CameraSettings(
-          sensorSensitivity: 100,
-          sensorExposureTime: 0.006,
-          controlAeExposureCompensation: 0.0,
-          flashMode: 'OFF',
-          jpegQuality: 95,
-          controlSceneMode: 'LANDSCAPE',
-        );
-
-      case 'macro':
-        return CameraSettings(
-          sensorSensitivity: 200,
-          sensorExposureTime: 0.016,
-          controlAeExposureCompensation: 0.0,
-          flashMode: 'AUTO',
-          jpegQuality: 95,
-          controlSceneMode: 'MACRO',
-        );
-
-      default:
-        return CameraSettings(
-          sensorSensitivity: 400,
-          sensorExposureTime: 0.008,
-          controlAeExposureCompensation: 0.0,
-          flashMode: 'AUTO',
-          jpegQuality: 90,
-          controlSceneMode: 'AUTO',
-        );
-    }
-  }
-
-
-  bool _isAdviceQuery(String input) {
-    final lower = input.toLowerCase();
-    return lower.contains('팁') ||
-        lower.contains('조언') ||
-        lower.contains('방법') ||
-        lower.contains('어떻게') ||
-        lower.contains('추천');
-  }
-
-  Future<void> _processUserInput(String input) async {
-    // 1) 타이핑 상태 시작
-    setState(() => _isTyping = true);
-    final bool isAdvice      = _isAdviceQuery(input);
-    if(isAdvice) {
-      String botText = "이런 숏츠 영상을 추천드려요!";
-      String? youtubeUrl;
-      try {
-        youtubeUrl = await ApiService.getUrl(input);
-      } catch (e) {
-        botText = "죄송해요, 영상을 가져오는 데 실패했어요.";
-        youtubeUrl = null;
-      }
-      // 4) 지연 시간 추가 (UI 응답성 향상)
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // 5) 채팅창에 봇 응답 추가 및 타이핑 상태 종료
-      setState(() {
-        _messages.add(ChatMessage(
-          text: botText,
-          isUser: false,
-          timestamp: DateTime.now(),
-          youtubeUrl: youtubeUrl,
-        ));
-        _isTyping = false;
-      });
-    } else {
-      // 2) 메시지 답변 준비
-      final response = _generateResponse(input);
-
-      // 3) 카메라 설정 준비
-      CameraSettings? settings;
-      try {
-        settings = await ApiService.getMockCameraSettings(input);
-      } catch (e) {
-        settings = _extractCameraSettings(input);
-      }
-
-      // 4) 지연 시간 추가 (UI 응답성 향상)
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // 5) 채팅창에 봇 응답 추가 및 타이핑 상태 종료
-      setState(() {
-        _messages.add(ChatMessage(
-          text: response,
-          isUser: false,
-          timestamp: DateTime.now(),
-          cameraSettings: settings,
-        ));
-        _isTyping = false;
-      });
-
-    }
-
-    _scrollToBottom();
-  }
-
   // 카메라 설정 적용 및 화면 이동 함수
   void _applyCameraSettings(CameraSettings settings) {
     try {
@@ -353,131 +387,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
       );
     }
-  }
-
-  String _generateResponse(String input) {
-    final lowerInput = input.toLowerCase();
-
-    if (lowerInput.contains('인물') || lowerInput.contains('사람') || lowerInput.contains('포트레이트')) {
-      return "인물 사진 촬영에 최적화된 설정을 준비했습니다! 📷\n\n• 아웃포커싱 효과를 위한 낮은 F값\n• 자연스러운 색감 조정\n• 얼굴 인식 AF 활성화\n• ISO 200으로 노이즈 최소화\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('야경') || lowerInput.contains('밤') || lowerInput.contains('어두운')) {
-      return "야경 촬영 설정을 준비했습니다! 🌃\n\n• 높은 ISO 1600으로 밝기 확보\n• 긴 노출 시간 설정\n• 노이즈 감소 기능 활성화\n• 삼각대 사용 권장\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('접사') || lowerInput.contains('클로즈업') || lowerInput.contains('가까이')) {
-      return "접사 촬영 설정을 준비했습니다! 🔍\n\n• 매크로 모드 활성화\n• 높은 F값으로 피사계 심도 확보\n• 정확한 초점을 위한 수동 포커스\n• 충분한 조명 확보\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('운동') || lowerInput.contains('스포츠') || lowerInput.contains('빠른')) {
-      return "액션/스포츠 촬영 설정을 준비했습니다! 🏃‍♂️\n\n• 빠른 셔터 스피드로 동작 정지\n• 연속 촬영 모드 활성화\n• 추적 AF로 움직이는 피사체 포착\n• 높은 ISO 800으로 충분한 노출\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('풍경') || lowerInput.contains('자연') || lowerInput.contains('산') || lowerInput.contains('바다')) {
-      return "풍경 촬영 설정을 준비했습니다! 🏔️\n\n• 넓은 피사계 심도를 위한 높은 F값\n• 선명한 이미지를 위한 낮은 ISO 100\n• 황금 시간대 촬영 권장\n• 삼각대 사용으로 안정성 확보\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('밝게') || lowerInput.contains('밝은')) {
-      return "밝은 사진 촬영 설정을 준비했습니다! ☀️\n\n• ISO 800으로 감도 증가\n• 노출 보정 +1.0 적용\n• 자동 플래시 모드\n• 높은 품질 JPEG 95%\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    if (lowerInput.contains('어둡게') || lowerInput.contains('어두운')) {
-      return "어두운 분위기의 사진 설정을 준비했습니다! 🌙\n\n• ISO 100으로 노이즈 최소화\n• 노출 보정 -1.0 적용\n• 플래시 꺼짐\n• 품질 85%로 적절한 용량\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-    }
-
-    return "말씀해주신 내용을 바탕으로 카메라 설정을 준비했습니다! 📸\n\n기본적인 촬영 설정으로 구성되어 있으니, 상황에 맞게 조정해서 사용해보세요.\n\n아래 버튼을 눌러 설정을 적용하고 촬영을 시작하세요!";
-  }
-
-  CameraSettings _extractCameraSettings(String input) {
-    final lowerInput = input.toLowerCase();
-
-    if (lowerInput.contains('인물') || lowerInput.contains('사람') || lowerInput.contains('포트레이트')) {
-      return CameraSettings(
-        sensorSensitivity: 200,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'AUTO',
-        jpegQuality: 95,
-        controlSceneMode: 'PORTRAIT',
-      );
-    }
-
-    if (lowerInput.contains('야경') || lowerInput.contains('밤') || lowerInput.contains('어두운')) {
-      return CameraSettings(
-        sensorSensitivity: 1600,
-        sensorExposureTime: 0.066,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'OFF',
-        jpegQuality: 90,
-        controlSceneMode: 'NIGHT',
-      );
-    }
-
-    if (lowerInput.contains('접사') || lowerInput.contains('클로즈업') || lowerInput.contains('가까이')) {
-      return CameraSettings(
-        sensorSensitivity: 100,
-        sensorExposureTime: 0.016,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'AUTO',
-        jpegQuality: 95,
-        controlSceneMode: 'MACRO',
-      );
-    }
-
-    if (lowerInput.contains('운동') || lowerInput.contains('스포츠') || lowerInput.contains('빠른')) {
-      return CameraSettings(
-        sensorSensitivity: 800,
-        sensorExposureTime: 0.002,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'OFF',
-        jpegQuality: 90,
-        controlSceneMode: 'SPORTS',
-      );
-    }
-
-    if (lowerInput.contains('풍경') || lowerInput.contains('자연') || lowerInput.contains('산') || lowerInput.contains('바다')) {
-      return CameraSettings(
-        sensorSensitivity: 100,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'OFF',
-        jpegQuality: 95,
-        controlSceneMode: 'LANDSCAPE',
-      );
-    }
-
-    if (lowerInput.contains('밝게') || lowerInput.contains('밝은')) {
-      return CameraSettings(
-        sensorSensitivity: 800,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: 1.0,
-        flashMode: 'AUTO',
-        jpegQuality: 95,
-        controlSceneMode: 'AUTO',
-      );
-    }
-
-    if (lowerInput.contains('어둡게') || lowerInput.contains('어두운')) {
-      return CameraSettings(
-        sensorSensitivity: 100,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: -1.0,
-        flashMode: 'OFF',
-        jpegQuality: 85,
-        controlSceneMode: 'AUTO',
-      );
-    }
-
-    // 기본 설정
-    return CameraSettings(
-      sensorSensitivity: 400,
-      sensorExposureTime: 0.008,
-      controlAeExposureCompensation: 0.0,
-      flashMode: 'AUTO',
-      jpegQuality: 90,
-      controlSceneMode: 'AUTO',
-    );
   }
 
   void _scrollToBottom() {
@@ -540,6 +449,23 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
+
+  // 텍스트 메시지 제출 핸들러
+  void _handleSubmitted(String text) {
+    if (text.trim().isEmpty) return;
+
+    // 텍스트와 이미지(있다면) 함께 전송
+    _sendMessage(text: text.trim(), imagePath: _pendingImagePath);
+
+    //_sendMessage(text: text.trim(), imagePath: null);
+    _textController.clear();
+
+    // 이미지 초기화
+    setState(() {
+      _pendingImagePath = null;
+    });
+  }
+// build 메서드와 _buildMessageBubble 메서드
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -577,60 +503,60 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // 이미지 첨부 버튼
-                IconButton(
-                  onPressed: _showImagePickerDialog,
-                  icon: const Icon(Icons.photo),
-                  tooltip: '사진 첨부',
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: '어떤 사진을 찍고 싶으신가요?',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: _handleSubmitted,
-                    textInputAction: TextInputAction.send,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  mini: true,
-                  onPressed: () => _handleSubmitted(_textController.text),
-                  child: const Icon(Icons.send),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: Theme.of(context).colorScheme.surface,
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: Colors.black.withOpacity(0.05),
+          //         blurRadius: 10,
+          //         offset: const Offset(0, -5),
+          //       ),
+          //     ],
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       // 이미지 첨부 버튼
+          //       IconButton(
+          //         onPressed: _showImagePickerDialog,
+          //         icon: const Icon(Icons.photo),
+          //         tooltip: '사진 첨부',
+          //       ),
+          //       Expanded(
+          //         child: TextField(
+          //           controller: _textController,
+          //           decoration: InputDecoration(
+          //             hintText: '어떤 사진을 찍고 싶으신가요?',
+          //             border: OutlineInputBorder(
+          //               borderRadius: BorderRadius.circular(24),
+          //               borderSide: BorderSide.none,
+          //             ),
+          //             filled: true,
+          //             fillColor: Colors.grey[100],
+          //             contentPadding: const EdgeInsets.symmetric(
+          //               horizontal: 16,
+          //               vertical: 12,
+          //             ),
+          //           ),
+          //           onSubmitted: _handleSubmitted,
+          //           textInputAction: TextInputAction.send,
+          //         ),
+          //       ),
+          //       const SizedBox(width: 8),
+          //       FloatingActionButton(
+          //         mini: true,
+          //         onPressed: () => _handleSubmitted(_textController.text),
+          //         child: const Icon(Icons.send),
+          //       ),
+          //     ],
+          //   ),
+          // ),
+          _buildInputArea(),
         ],
       ),
     );
   }
-
 
   Widget _buildMessageBubble(ChatMessage message) {
     return Container(
@@ -676,7 +602,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 이미지가 있는 경우
+                          // 사용자가 보낸 이미지 (imagePath)
                           if (message.imagePath != null) ...[
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
@@ -689,16 +615,31 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 8),
                           ],
-                          // 텍스트
-                          Text(
-                            message.text,
-                            style: TextStyle(
-                              color: message.isUser
-                                  ? Colors.white
-                                  : Colors.black87,
-                              fontSize: 16,
+                          // 봇이 보낸 처리된 이미지 (image bytes)
+                          if (message.image != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                message.image!,
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                          ],
+                          // 텍스트 (텍스트가 있을 때만)
+                          if (message.text.isNotEmpty) ...[
+                            Text(
+                              message.text,
+                              style: TextStyle(
+                                color: message.isUser
+                                    ? Colors.white
+                                    : Colors.black87,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -745,35 +686,294 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           if (message.youtubeUrl != null) ...[
             const SizedBox(height: 8),
             YouTubePlayerItem(youtubeUrl: message.youtubeUrl!),
-            // GestureDetector(
-            //   onTap: () async {
-            //     final uri = Uri.parse(message.youtubeUrl!);
-            //     if (await canLaunchUrl(uri)) {
-            //       await launchUrl(uri, mode: LaunchMode.externalApplication);
-            //     }
-            //   },
-            //   child: Row(
-            //     mainAxisSize: MainAxisSize.min,
-            //     children: [
-            //       const Icon(Icons.ondemand_video,
-            //           size: 20, color: Colors.red),
-            //       const SizedBox(width: 4),
-            //       const Text(
-            //         'YouTube 영상 보기',
-            //         style: TextStyle(
-            //           color: Colors.blue,
-            //           decoration: TextDecoration.underline,
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
           ],
         ],
       ),
     );
   }
 
+
+  Widget _buildInputArea() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_pendingImagePath != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(_pendingImagePath!),
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 0, right: 0,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _pendingImagePath = null),
+                    child: const Icon(Icons.close, size: 20, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.photo),
+              onPressed: _showImagePickerDialog,
+            ),
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                decoration: const InputDecoration(hintText: '메시지 입력'),
+                textInputAction: TextInputAction.send,
+                onSubmitted: _handleSubmitted,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: () => _handleSubmitted(_textController.text),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+
+// 위에거 잘 안되면 밑에 꺼 ㄱㄱ
+
+  //
+  // // build 메서드와 _buildMessageBubble 메서드
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: const Text('📸 카메라 어시스턴트'),
+  //       centerTitle: true,
+  //       backgroundColor: Theme.of(context).colorScheme.surface,
+  //       elevation: 0,
+  //     ),
+  //     body: Column(
+  //       children: [
+  //         Expanded(
+  //           child: Stack(
+  //             children: [
+  //               // 메시지 리스트
+  //               ListView.builder(
+  //                 controller: _scrollController,
+  //                 padding: const EdgeInsets.all(16),
+  //                 itemCount: _messages.length,
+  //                 itemBuilder: (context, index) {
+  //                   return _buildMessageBubble(_messages[index]);
+  //                 },
+  //               ),
+  //               // 타이핑 인디케이터
+  //               if (_isTyping)
+  //                 Positioned(
+  //                   bottom: 0,
+  //                   left: 0,
+  //                   right: 0,
+  //                   child: Container(
+  //                     color: Colors.white,
+  //                     child: _buildTypingIndicator(),
+  //                   ),
+  //                 ),
+  //             ],
+  //           ),
+  //         ),
+  //         Container(
+  //           padding: const EdgeInsets.all(16),
+  //           decoration: BoxDecoration(
+  //             color: Theme.of(context).colorScheme.surface,
+  //             boxShadow: [
+  //               BoxShadow(
+  //                 color: Colors.black.withOpacity(0.05),
+  //                 blurRadius: 10,
+  //                 offset: const Offset(0, -5),
+  //               ),
+  //             ],
+  //           ),
+  //           child: Row(
+  //             children: [
+  //               // 이미지 첨부 버튼
+  //               IconButton(
+  //                 onPressed: _showImagePickerDialog,
+  //                 icon: const Icon(Icons.photo),
+  //                 tooltip: '사진 첨부',
+  //               ),
+  //               Expanded(
+  //                 child: TextField(
+  //                   controller: _textController,
+  //                   decoration: InputDecoration(
+  //                     hintText: '어떤 사진을 찍고 싶으신가요?',
+  //                     border: OutlineInputBorder(
+  //                       borderRadius: BorderRadius.circular(24),
+  //                       borderSide: BorderSide.none,
+  //                     ),
+  //                     filled: true,
+  //                     fillColor: Colors.grey[100],
+  //                     contentPadding: const EdgeInsets.symmetric(
+  //                       horizontal: 16,
+  //                       vertical: 12,
+  //                     ),
+  //                   ),
+  //                   onSubmitted: _handleSubmitted,
+  //                   textInputAction: TextInputAction.send,
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 8),
+  //               FloatingActionButton(
+  //                 mini: true,
+  //                 onPressed: () => _handleSubmitted(_textController.text),
+  //                 child: const Icon(Icons.send),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+  //
+  // Widget _buildMessageBubble(ChatMessage message) {
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(vertical: 4),
+  //     child: Column(
+  //       crossAxisAlignment:
+  //       message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+  //       children: [
+  //         // 1) 아바타 + 메시지 버블
+  //         Row(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           mainAxisAlignment:
+  //           message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+  //           children: [
+  //             if (!message.isUser) ...[
+  //               Container(
+  //                 width: 32,
+  //                 height: 32,
+  //                 decoration: BoxDecoration(
+  //                   color: Theme.of(context).colorScheme.primary,
+  //                   shape: BoxShape.circle,
+  //                 ),
+  //                 child:
+  //                 const Icon(Icons.smart_toy, color: Colors.white, size: 16),
+  //               ),
+  //               const SizedBox(width: 8),
+  //             ],
+  //             Flexible(
+  //               child: Column(
+  //                 crossAxisAlignment: message.isUser
+  //                     ? CrossAxisAlignment.end
+  //                     : CrossAxisAlignment.start,
+  //                 children: [
+  //                   // 말풍선
+  //                   Container(
+  //                     padding: const EdgeInsets.all(12),
+  //                     decoration: BoxDecoration(
+  //                       color: message.isUser
+  //                           ? Theme.of(context).colorScheme.primary
+  //                           : Colors.grey[100],
+  //                       borderRadius: BorderRadius.circular(16),
+  //                     ),
+  //                     child: Column(
+  //                       crossAxisAlignment: CrossAxisAlignment.start,
+  //                       children: [
+  //                         // 사용자가 보낸 이미지 (imagePath)
+  //                         if (message.imagePath != null) ...[
+  //                           ClipRRect(
+  //                             borderRadius: BorderRadius.circular(8),
+  //                             child: Image.file(
+  //                               File(message.imagePath!),
+  //                               width: 200,
+  //                               height: 200,
+  //                               fit: BoxFit.cover,
+  //                             ),
+  //                           ),
+  //                           const SizedBox(height: 8),
+  //                         ],
+  //                         // 봇이 보낸 처리된 이미지 (image bytes)
+  //                         if (message.image != null) ...[
+  //                           ClipRRect(
+  //                             borderRadius: BorderRadius.circular(8),
+  //                             child: Image.memory(
+  //                               message.image!,
+  //                               width: 200,
+  //                               height: 200,
+  //                               fit: BoxFit.cover,
+  //                             ),
+  //                           ),
+  //                           const SizedBox(height: 8),
+  //                         ],
+  //                         // 텍스트 (텍스트가 있을 때만)
+  //                         if (message.text.isNotEmpty) ...[
+  //                           Text(
+  //                             message.text,
+  //                             style: TextStyle(
+  //                               color: message.isUser
+  //                                   ? Colors.white
+  //                                   : Colors.black87,
+  //                               fontSize: 16,
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ],
+  //                     ),
+  //                   ),
+  //                   // 카메라 설정 버튼 (필요할 때만)
+  //                   if (message.cameraSettings != null) ...[
+  //                     const SizedBox(height: 8),
+  //                     ElevatedButton.icon(
+  //                       onPressed: () =>
+  //                           _applyCameraSettings(message.cameraSettings!),
+  //                       icon: const Icon(Icons.camera_alt, size: 18),
+  //                       label: const Text('설정 적용하고 촬영하기'),
+  //                       style: ElevatedButton.styleFrom(
+  //                         backgroundColor:
+  //                         Theme.of(context).colorScheme.primary,
+  //                         foregroundColor: Colors.white,
+  //                         padding: const EdgeInsets.symmetric(
+  //                             horizontal: 16, vertical: 8),
+  //                         shape: RoundedRectangleBorder(
+  //                           borderRadius: BorderRadius.circular(20),
+  //                         ),
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ],
+  //               ),
+  //             ),
+  //             if (message.isUser) ...[
+  //               const SizedBox(width: 8),
+  //               Container(
+  //                 width: 32,
+  //                 height: 32,
+  //                 decoration: BoxDecoration(
+  //                   color: Colors.grey[300],
+  //                   shape: BoxShape.circle,
+  //                 ),
+  //                 child:
+  //                 const Icon(Icons.person, color: Colors.grey, size: 16),
+  //               ),
+  //             ],
+  //           ],
+  //         ),
+  //
+  //         // 2) YouTube URL (필요할 때만)
+  //         if (message.youtubeUrl != null) ...[
+  //           const SizedBox(height: 8),
+  //           YouTubePlayerItem(youtubeUrl: message.youtubeUrl!),
+  //         ],
+  //       ],
+  //     ),
+  //   );
+  // }
   @override
   void dispose() {
     _textController.dispose();
@@ -789,6 +989,7 @@ class ChatMessage {
   final CameraSettings? cameraSettings;
   final String? imagePath; // 이미지 경로 추가
   final String? youtubeUrl;
+  final Uint8List? image;
 
   ChatMessage({
     required this.text,
@@ -797,6 +998,7 @@ class ChatMessage {
     this.cameraSettings,
     this.imagePath,
     this.youtubeUrl,
+    this.image,
   });
 }
 

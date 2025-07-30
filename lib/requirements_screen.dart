@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'camera_settings.dart';
-
+import 'apiservice.dart';
 /// 요구사항 모델
 class Requirement {
   final String id, title, description;
@@ -50,9 +50,8 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
 
   Future<void> _runReq(Requirement r) async {
     setState(() => _busy = true);
-    final s = await ApiService.getMockCameraSettings(
-        '${r.title} ${r.description}');
-    widget.onSettingsReceived(s!);
+    // final s = await ApiService.sendToAgentica('${r.title} ${r.description}');
+    // widget.onSettingsReceived(s);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
