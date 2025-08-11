@@ -11,6 +11,10 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'apiservice.dart';
 import 'dart:convert';
 
+import 'package:path_provider/path_provider.dart';
+import 'package:gal/gal.dart';
+
+
 
 class ChatScreen extends StatefulWidget {
   final Function(CameraSettings) onSettingsReceived;
@@ -50,145 +54,55 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
     _scrollToBottom();
 
-    // 2) Agentica에 페이로드 전송
-    _sendToAgentica(text: text, imagePath: imagePath);
+    // 2) Mock 카메라 설정이나 Agentica 호출 결정
+    _processUserInput(text: text, imagePath: imagePath);
   }
 
-  // Future<void> _sendToAgentica({  required String text,    String? imagePath,  }) async {
-  //   setState(() => _isTyping = true);
-  //
-  //   // base64 인코딩(이미지 있으면)
-  //   String? b64 = null;
-  //   if (imagePath != null) {
-  //     final bytes = await File(imagePath).readAsBytes();
-  //     b64 = base64Encode(bytes);
-  //   }
-  //
-  //   // Agentica 호출
-  //   final res = await ApiService.sendToAgentica(text, b64!);
-  //
-  //   // 지연
-  //   await Future.delayed(const Duration(milliseconds: 800));
-  //
-  //   // 봇 응답 추가
-  //
-  //   if(res.cameraSettings != null){
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: res.text,
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         cameraSettings: res.cameraSettings,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //     _scrollToBottom();
-  //   }else if(res.url != null){
-  //
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: "이런 숏츠 영상을 추천드려요!",
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         youtubeUrl: res.url,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //   }else if(res.b64 != null){
-  //     Uint8List bytes = base64Decode(b64);
-  //
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: "보정 완료",
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         imagePath: res.b64,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //   }else{
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: res.text,
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //     _scrollToBottom();
-  //   }
-  //
-  //
-  // }
-
-
-  // Future<void> _sendToAgentica({  required String text,    String? imagePath,  }) async {
-  //   setState(() => _isTyping = true);
-  //
-  //
-  //   // Agentica 호출
-  //   final res = await ApiService.sendToAgentica(text, imagePath!);
-  //
-  //   // 지연
-  //   await Future.delayed(const Duration(milliseconds: 800));
-  //
-  //   // 봇 응답 추가
-  //
-  //   if(res.cameraSettings != null){
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: res.text,
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         cameraSettings: res.cameraSettings,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //     _scrollToBottom();
-  //   }else if(res.url != null){
-  //
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: "이런 숏츠 영상을 추천드려요!",
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         youtubeUrl: res.url,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //   }else if(res.b64 != null){
-  //     Uint8List bytes = base64Decode(res.b64);
-  //
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: "보정 완료",
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //         image: bytes,
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //   }else{
-  //     setState(() {
-  //       _messages.add(ChatMessage(
-  //         text: res.text,
-  //         isUser: false,
-  //         timestamp: DateTime.now(),
-  //       ));
-  //       _isTyping = false;
-  //     });
-  //     _scrollToBottom();
-  //   }
-  //
-  //
-  // }
-// _sendToAgentica 함수 개선
-  Future<void> _sendToAgentica({
+  // 사용자 입력 처리 함수 (Mock과 실제 API 호출을 구분)
+  Future<void> _processUserInput({
     required String text,
     String? imagePath,
   }) async {
     setState(() => _isTyping = true);
 
+    try {
+      // // 텍스트만 있고 이미지가 없는 경우 Mock 카메라 설정 시도
+      // if (imagePath == null && text.trim().isNotEmpty) {
+      //   // Mock 카메라 설정 먼저 시도
+      //   final mockSettings = await ApiService.getMockCameraSettings(text);
+      //
+      //   if (mockSettings != null) {
+      //     // Mock 설정이 반환된 경우
+      //     await Future.delayed(const Duration(milliseconds: 800));
+      //
+      //     _addBotMessage(
+      //       text: "요청하신 촬영 조건에 맞는 카메라 설정을 준비했습니다! 아래 버튼을 눌러 설정을 적용하고 촬영해보세요.",
+      //       cameraSettings: mockSettings,
+      //     );
+      //     return;
+      //   }
+      // }
+
+      // Mock 설정이 없거나 이미지가 있는 경우 실제 API 호출
+      await _sendToAgentica(text: text, imagePath: imagePath);
+
+    } catch (e) {
+      print('사용자 입력 처리 오류: $e');
+      _addBotMessage(
+        text: "처리 중 오류가 발생했습니다. 다시 시도해 주세요.",
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isTyping = false);
+      }
+    }
+  }
+
+  // _sendToAgentica 함수 개선
+  Future<void> _sendToAgentica({
+    required String text,
+    String? imagePath,
+  }) async {
     try {
       // imagePath를 그대로 ApiService로 전달
       final res = await ApiService.sendToAgentica(text, imagePath);
@@ -213,6 +127,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         // 보정된 이미지 응답
         try {
           final processedImageBytes = base64Decode(res.b64!);
+
           _addBotMessage(
             text: "보정 완료",
             image: processedImageBytes,
@@ -230,15 +145,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _addBotMessage(
         text: "죄송합니다. 서버와의 통신 중 오류가 발생했습니다. 다시 시도해 주세요.",
       );
-    } finally {
-      // 항상 타이핑 상태 해제
-      if (mounted) {
-        setState(() => _isTyping = false);
-      }
     }
   }
 
-// 봇 메시지 추가를 위한 헬퍼 함수
+  // 봇 메시지 추가를 위한 헬퍼 함수
   void _addBotMessage({
     required String text,
     CameraSettings? cameraSettings,
@@ -260,7 +170,25 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
+  // Mock 카메라 설정 테스트 버튼 (개발/테스트용)
+  void _testMockCameraSettings() async {
+    setState(() => _isTyping = true);
 
+    try {
+      final mockSettings = await ApiService.getMockCameraSettings("밝게 찍고 싶어");
+
+      if (mockSettings != null) {
+        _addBotMessage(
+          text: "테스트: 밝은 사진 촬영을 위한 카메라 설정입니다.",
+          cameraSettings: mockSettings,
+        );
+      }
+    } catch (e) {
+      print('Mock 테스트 오류: $e');
+    } finally {
+      setState(() => _isTyping = false);
+    }
+  }
 
   void _addWelcomeMessage() {
     _messages.add(ChatMessage(
@@ -308,14 +236,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // 이미지 메시지 전송
   void _sendImageMessage(XFile image) {
-
     setState(() {
       _pendingImagePath = image.path;
     });
   }
 
-
-  // 선택
   // 이미지 선택 다이얼로그 표시
   void _showImagePickerDialog() {
     showModalBottomSheet(
@@ -449,7 +374,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-
   // 텍스트 메시지 제출 핸들러
   void _handleSubmitted(String text) {
     if (text.trim().isEmpty) return;
@@ -457,7 +381,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // 텍스트와 이미지(있다면) 함께 전송
     _sendMessage(text: text.trim(), imagePath: _pendingImagePath);
 
-    //_sendMessage(text: text.trim(), imagePath: null);
     _textController.clear();
 
     // 이미지 초기화
@@ -465,7 +388,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _pendingImagePath = null;
     });
   }
-// build 메서드와 _buildMessageBubble 메서드
+
+  // build 메서드
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -474,6 +398,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
+        // 개발/테스트용 액션 버튼 추가
+        actions: [
+          IconButton(
+            onPressed: _testMockCameraSettings,
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Mock 테스트',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -503,55 +435,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          // Container(
-          //   padding: const EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     color: Theme.of(context).colorScheme.surface,
-          //     boxShadow: [
-          //       BoxShadow(
-          //         color: Colors.black.withOpacity(0.05),
-          //         blurRadius: 10,
-          //         offset: const Offset(0, -5),
-          //       ),
-          //     ],
-          //   ),
-          //   child: Row(
-          //     children: [
-          //       // 이미지 첨부 버튼
-          //       IconButton(
-          //         onPressed: _showImagePickerDialog,
-          //         icon: const Icon(Icons.photo),
-          //         tooltip: '사진 첨부',
-          //       ),
-          //       Expanded(
-          //         child: TextField(
-          //           controller: _textController,
-          //           decoration: InputDecoration(
-          //             hintText: '어떤 사진을 찍고 싶으신가요?',
-          //             border: OutlineInputBorder(
-          //               borderRadius: BorderRadius.circular(24),
-          //               borderSide: BorderSide.none,
-          //             ),
-          //             filled: true,
-          //             fillColor: Colors.grey[100],
-          //             contentPadding: const EdgeInsets.symmetric(
-          //               horizontal: 16,
-          //               vertical: 12,
-          //             ),
-          //           ),
-          //           onSubmitted: _handleSubmitted,
-          //           textInputAction: TextInputAction.send,
-          //         ),
-          //       ),
-          //       const SizedBox(width: 8),
-          //       FloatingActionButton(
-          //         mini: true,
-          //         onPressed: () => _handleSubmitted(_textController.text),
-          //         child: const Icon(Icons.send),
-          //       ),
-          //     ],
-          //   ),
-          // ),
           _buildInputArea(),
         ],
       ),
@@ -627,6 +510,37 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               ),
                             ),
                             const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  // 1) 임시 파일로 쓰기
+                                  final tmpDir = await getTemporaryDirectory();
+                                  final tmpPath = '${tmpDir.path}/ai_${DateTime.now().millisecondsSinceEpoch}.png';
+                                  final tmpFile = File(tmpPath);
+                                  await tmpFile.writeAsBytes(message.image!);
+
+                                  // 3) Gal로 갤러리에 저장
+                                  await Gal.putImage(tmpFile.path);
+
+                                  // 예외 없이 여기까지 오면 성공
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('갤러리에 저장되었습니다')),
+                                  );
+
+                                }catch(e){
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('저장 중 오류 발생: $e')),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.download_rounded, size: 18),
+                              label: const Text('갤러리에 저장'),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(150, 36),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 8,),
                           ],
                           // 텍스트 (텍스트가 있을 때만)
                           if (message.text.isNotEmpty) ...[
@@ -692,7 +606,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-
   Widget _buildInputArea() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -721,259 +634,58 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.photo),
-              onPressed: _showImagePickerDialog,
-            ),
-            Expanded(
-              child: TextField(
-                controller: _textController,
-                decoration: const InputDecoration(hintText: '메시지 입력'),
-                textInputAction: TextInputAction.send,
-                onSubmitted: _handleSubmitted,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: () => _handleSubmitted(_textController.text),
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.photo),
+                onPressed: _showImagePickerDialog,
+                tooltip: '사진 첨부',
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  decoration: InputDecoration(
+                    hintText: '어떤 사진을 찍고 싶으신가요?',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: _handleSubmitted,
+                ),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton(
+                mini: true,
+                onPressed: () => _handleSubmitted(_textController.text),
+                child: const Icon(Icons.send),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-
-// 위에거 잘 안되면 밑에 꺼 ㄱㄱ
-
-  //
-  // // build 메서드와 _buildMessageBubble 메서드
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: const Text('📸 카메라 어시스턴트'),
-  //       centerTitle: true,
-  //       backgroundColor: Theme.of(context).colorScheme.surface,
-  //       elevation: 0,
-  //     ),
-  //     body: Column(
-  //       children: [
-  //         Expanded(
-  //           child: Stack(
-  //             children: [
-  //               // 메시지 리스트
-  //               ListView.builder(
-  //                 controller: _scrollController,
-  //                 padding: const EdgeInsets.all(16),
-  //                 itemCount: _messages.length,
-  //                 itemBuilder: (context, index) {
-  //                   return _buildMessageBubble(_messages[index]);
-  //                 },
-  //               ),
-  //               // 타이핑 인디케이터
-  //               if (_isTyping)
-  //                 Positioned(
-  //                   bottom: 0,
-  //                   left: 0,
-  //                   right: 0,
-  //                   child: Container(
-  //                     color: Colors.white,
-  //                     child: _buildTypingIndicator(),
-  //                   ),
-  //                 ),
-  //             ],
-  //           ),
-  //         ),
-  //         Container(
-  //           padding: const EdgeInsets.all(16),
-  //           decoration: BoxDecoration(
-  //             color: Theme.of(context).colorScheme.surface,
-  //             boxShadow: [
-  //               BoxShadow(
-  //                 color: Colors.black.withOpacity(0.05),
-  //                 blurRadius: 10,
-  //                 offset: const Offset(0, -5),
-  //               ),
-  //             ],
-  //           ),
-  //           child: Row(
-  //             children: [
-  //               // 이미지 첨부 버튼
-  //               IconButton(
-  //                 onPressed: _showImagePickerDialog,
-  //                 icon: const Icon(Icons.photo),
-  //                 tooltip: '사진 첨부',
-  //               ),
-  //               Expanded(
-  //                 child: TextField(
-  //                   controller: _textController,
-  //                   decoration: InputDecoration(
-  //                     hintText: '어떤 사진을 찍고 싶으신가요?',
-  //                     border: OutlineInputBorder(
-  //                       borderRadius: BorderRadius.circular(24),
-  //                       borderSide: BorderSide.none,
-  //                     ),
-  //                     filled: true,
-  //                     fillColor: Colors.grey[100],
-  //                     contentPadding: const EdgeInsets.symmetric(
-  //                       horizontal: 16,
-  //                       vertical: 12,
-  //                     ),
-  //                   ),
-  //                   onSubmitted: _handleSubmitted,
-  //                   textInputAction: TextInputAction.send,
-  //                 ),
-  //               ),
-  //               const SizedBox(width: 8),
-  //               FloatingActionButton(
-  //                 mini: true,
-  //                 onPressed: () => _handleSubmitted(_textController.text),
-  //                 child: const Icon(Icons.send),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-  //
-  // Widget _buildMessageBubble(ChatMessage message) {
-  //   return Container(
-  //     margin: const EdgeInsets.symmetric(vertical: 4),
-  //     child: Column(
-  //       crossAxisAlignment:
-  //       message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-  //       children: [
-  //         // 1) 아바타 + 메시지 버블
-  //         Row(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           mainAxisAlignment:
-  //           message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-  //           children: [
-  //             if (!message.isUser) ...[
-  //               Container(
-  //                 width: 32,
-  //                 height: 32,
-  //                 decoration: BoxDecoration(
-  //                   color: Theme.of(context).colorScheme.primary,
-  //                   shape: BoxShape.circle,
-  //                 ),
-  //                 child:
-  //                 const Icon(Icons.smart_toy, color: Colors.white, size: 16),
-  //               ),
-  //               const SizedBox(width: 8),
-  //             ],
-  //             Flexible(
-  //               child: Column(
-  //                 crossAxisAlignment: message.isUser
-  //                     ? CrossAxisAlignment.end
-  //                     : CrossAxisAlignment.start,
-  //                 children: [
-  //                   // 말풍선
-  //                   Container(
-  //                     padding: const EdgeInsets.all(12),
-  //                     decoration: BoxDecoration(
-  //                       color: message.isUser
-  //                           ? Theme.of(context).colorScheme.primary
-  //                           : Colors.grey[100],
-  //                       borderRadius: BorderRadius.circular(16),
-  //                     ),
-  //                     child: Column(
-  //                       crossAxisAlignment: CrossAxisAlignment.start,
-  //                       children: [
-  //                         // 사용자가 보낸 이미지 (imagePath)
-  //                         if (message.imagePath != null) ...[
-  //                           ClipRRect(
-  //                             borderRadius: BorderRadius.circular(8),
-  //                             child: Image.file(
-  //                               File(message.imagePath!),
-  //                               width: 200,
-  //                               height: 200,
-  //                               fit: BoxFit.cover,
-  //                             ),
-  //                           ),
-  //                           const SizedBox(height: 8),
-  //                         ],
-  //                         // 봇이 보낸 처리된 이미지 (image bytes)
-  //                         if (message.image != null) ...[
-  //                           ClipRRect(
-  //                             borderRadius: BorderRadius.circular(8),
-  //                             child: Image.memory(
-  //                               message.image!,
-  //                               width: 200,
-  //                               height: 200,
-  //                               fit: BoxFit.cover,
-  //                             ),
-  //                           ),
-  //                           const SizedBox(height: 8),
-  //                         ],
-  //                         // 텍스트 (텍스트가 있을 때만)
-  //                         if (message.text.isNotEmpty) ...[
-  //                           Text(
-  //                             message.text,
-  //                             style: TextStyle(
-  //                               color: message.isUser
-  //                                   ? Colors.white
-  //                                   : Colors.black87,
-  //                               fontSize: 16,
-  //                             ),
-  //                           ),
-  //                         ],
-  //                       ],
-  //                     ),
-  //                   ),
-  //                   // 카메라 설정 버튼 (필요할 때만)
-  //                   if (message.cameraSettings != null) ...[
-  //                     const SizedBox(height: 8),
-  //                     ElevatedButton.icon(
-  //                       onPressed: () =>
-  //                           _applyCameraSettings(message.cameraSettings!),
-  //                       icon: const Icon(Icons.camera_alt, size: 18),
-  //                       label: const Text('설정 적용하고 촬영하기'),
-  //                       style: ElevatedButton.styleFrom(
-  //                         backgroundColor:
-  //                         Theme.of(context).colorScheme.primary,
-  //                         foregroundColor: Colors.white,
-  //                         padding: const EdgeInsets.symmetric(
-  //                             horizontal: 16, vertical: 8),
-  //                         shape: RoundedRectangleBorder(
-  //                           borderRadius: BorderRadius.circular(20),
-  //                         ),
-  //                       ),
-  //                     ),
-  //                   ],
-  //                 ],
-  //               ),
-  //             ),
-  //             if (message.isUser) ...[
-  //               const SizedBox(width: 8),
-  //               Container(
-  //                 width: 32,
-  //                 height: 32,
-  //                 decoration: BoxDecoration(
-  //                   color: Colors.grey[300],
-  //                   shape: BoxShape.circle,
-  //                 ),
-  //                 child:
-  //                 const Icon(Icons.person, color: Colors.grey, size: 16),
-  //               ),
-  //             ],
-  //           ],
-  //         ),
-  //
-  //         // 2) YouTube URL (필요할 때만)
-  //         if (message.youtubeUrl != null) ...[
-  //           const SizedBox(height: 8),
-  //           YouTubePlayerItem(youtubeUrl: message.youtubeUrl!),
-  //         ],
-  //       ],
-  //     ),
-  //   );
-  // }
   @override
   void dispose() {
     _textController.dispose();
@@ -1042,7 +754,6 @@ class _YouTubePlayerItemState extends State<YouTubePlayerItem> {
     );
   }
 }
-
 
 
 
