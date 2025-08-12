@@ -65,14 +65,24 @@ public class NativeCameraView implements PlatformView, MethodChannel.MethodCallH
     private Range<Integer> aeCompRange = new Range<>(-2, 2);
 
     public NativeCameraView(Context context, BinaryMessenger messenger, int viewId) {
+
+        // 전달받은 context를 ApplicationContext로 변환 -> 앱 전체에서 사용 가능 -> 메모리 누수 방지
         this.context = context.getApplicationContext();
+
+        // 카메라 미리보기를 뿌릴 화면을 생성 -> 카메라2는 surfaceTexture에 그림 -> TextureView 사용
         this.textureView = new TextureView(context);
+
+        // 카메라2의 설정 들을 저장하는 객체
         this.cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
+        // flutter와 android 통신을 위한 MethodChannel 생성
         this.channel = new MethodChannel(messenger, "native_camera_channel_" + viewId);
         this.channel.setMethodCallHandler(this);
 
+        // 카메라 작업/파일 저장 등을 돌릴 백그라운드 스레드 시작
         startBackgroundThread();
+
+        // 프리뷰 화면이 준비됐는지를 알려주는 리스너 연결 -> 화면 준비되면 카메라 오픈
         textureView.setSurfaceTextureListener(surfaceListener);
     }
 

@@ -34,58 +34,58 @@ class ApiResponse {
 class ApiService {
   static const String apiUrl = 'http://175.121.138.146:9877/agent-conversation';
 
-  /// 테스트용 Mock
-  static Future<CameraSettings?> getMockCameraSettings(String requirement) async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    final lowerReq = requirement.toLowerCase();
-
-    if (lowerReq.contains('밝게') || lowerReq.contains('밝은')) {
-      return CameraSettings(
-        sensorSensitivity: 800,
-        sensorExposureTime: 0.033,
-        controlAeExposureCompensation: 1.0,
-        flashMode: 'AUTO',
-        jpegQuality: 95,
-        controlSceneMode: 'AUTO',
-      );
-    } else if (lowerReq.contains('어둡게') || lowerReq.contains('어두운')) {
-      return CameraSettings(
-        sensorSensitivity: 100,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: -1.0,
-        flashMode: 'OFF',
-        jpegQuality: 85,
-        controlSceneMode: 'AUTO',
-      );
-    } else if (lowerReq.contains('인물') || lowerReq.contains('사람')) {
-      return CameraSettings(
-        sensorSensitivity: 200,
-        sensorExposureTime: 0.008,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'AUTO',
-        jpegQuality: 95,
-        controlSceneMode: 'PORTRAIT',
-      );
-    } else if (lowerReq.contains('야경') || lowerReq.contains('밤')) {
-      return CameraSettings(
-        sensorSensitivity: 1600,
-        sensorExposureTime: 0.066,
-        controlAeExposureCompensation: 0.0,
-        flashMode: 'OFF',
-        jpegQuality: 90,
-        controlSceneMode: 'NIGHT',
-      );
-    }
-
-    return CameraSettings(
-      sensorSensitivity: 400,
-      sensorExposureTime: 0.011,
-      jpegQuality: 90,
-      controlSceneMode: 'AUTO',
-      flashMode: 'AUTO',
-    );
-  }
+  // /// 테스트용 Mock
+  // static Future<CameraSettings?> getMockCameraSettings(String requirement) async {
+  //   await Future.delayed(const Duration(seconds: 2));
+  //
+  //   final lowerReq = requirement.toLowerCase();
+  //
+  //   if (lowerReq.contains('밝게') || lowerReq.contains('밝은')) {
+  //     return CameraSettings(
+  //       sensorSensitivity: 800,
+  //       sensorExposureTime: 0.033,
+  //       controlAeExposureCompensation: 1.0,
+  //       flashMode: 'AUTO',
+  //       jpegQuality: 95,
+  //       controlSceneMode: 'AUTO',
+  //     );
+  //   } else if (lowerReq.contains('어둡게') || lowerReq.contains('어두운')) {
+  //     return CameraSettings(
+  //       sensorSensitivity: 100,
+  //       sensorExposureTime: 0.008,
+  //       controlAeExposureCompensation: -1.0,
+  //       flashMode: 'OFF',
+  //       jpegQuality: 85,
+  //       controlSceneMode: 'AUTO',
+  //     );
+  //   } else if (lowerReq.contains('인물') || lowerReq.contains('사람')) {
+  //     return CameraSettings(
+  //       sensorSensitivity: 200,
+  //       sensorExposureTime: 0.008,
+  //       controlAeExposureCompensation: 0.0,
+  //       flashMode: 'AUTO',
+  //       jpegQuality: 95,
+  //       controlSceneMode: 'PORTRAIT',
+  //     );
+  //   } else if (lowerReq.contains('야경') || lowerReq.contains('밤')) {
+  //     return CameraSettings(
+  //       sensorSensitivity: 1600,
+  //       sensorExposureTime: 0.066,
+  //       controlAeExposureCompensation: 0.0,
+  //       flashMode: 'OFF',
+  //       jpegQuality: 90,
+  //       controlSceneMode: 'NIGHT',
+  //     );
+  //   }
+  //
+  //   return CameraSettings(
+  //     sensorSensitivity: 400,
+  //     sensorExposureTime: 0.011,
+  //     jpegQuality: 90,
+  //     controlSceneMode: 'AUTO',
+  //     flashMode: 'AUTO',
+  //   );
+  // }
   static Future<ApiResponse> sendToAgentica(String text, String? imagePath) async {
     try {
       final uri = Uri.parse(apiUrl);

@@ -66,22 +66,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     setState(() => _isTyping = true);
 
     try {
-      // // 텍스트만 있고 이미지가 없는 경우 Mock 카메라 설정 시도
-      // if (imagePath == null && text.trim().isNotEmpty) {
-      //   // Mock 카메라 설정 먼저 시도
-      //   final mockSettings = await ApiService.getMockCameraSettings(text);
-      //
-      //   if (mockSettings != null) {
-      //     // Mock 설정이 반환된 경우
-      //     await Future.delayed(const Duration(milliseconds: 800));
-      //
-      //     _addBotMessage(
-      //       text: "요청하신 촬영 조건에 맞는 카메라 설정을 준비했습니다! 아래 버튼을 눌러 설정을 적용하고 촬영해보세요.",
-      //       cameraSettings: mockSettings,
-      //     );
-      //     return;
-      //   }
-      // }
 
       // Mock 설정이 없거나 이미지가 있는 경우 실제 API 호출
       await _sendToAgentica(text: text, imagePath: imagePath);
@@ -167,26 +151,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ));
       });
       _scrollToBottom();
-    }
-  }
-
-  // Mock 카메라 설정 테스트 버튼 (개발/테스트용)
-  void _testMockCameraSettings() async {
-    setState(() => _isTyping = true);
-
-    try {
-      final mockSettings = await ApiService.getMockCameraSettings("밝게 찍고 싶어");
-
-      if (mockSettings != null) {
-        _addBotMessage(
-          text: "테스트: 밝은 사진 촬영을 위한 카메라 설정입니다.",
-          cameraSettings: mockSettings,
-        );
-      }
-    } catch (e) {
-      print('Mock 테스트 오류: $e');
-    } finally {
-      setState(() => _isTyping = false);
     }
   }
 
@@ -398,14 +362,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        // 개발/테스트용 액션 버튼 추가
-        actions: [
-          IconButton(
-            onPressed: _testMockCameraSettings,
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Mock 테스트',
-          ),
-        ],
+
       ),
       body: Column(
         children: [
@@ -422,19 +379,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   },
                 ),
                 // 타이핑 인디케이터
-                if (_isTyping)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      color: Colors.white,
-                      child: _buildTypingIndicator(),
-                    ),
-                  ),
               ],
             ),
           ),
+          if (_isTyping)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Colors.white,
+                child: _buildTypingIndicator(),
+              ),
+            ),
           _buildInputArea(),
         ],
       ),

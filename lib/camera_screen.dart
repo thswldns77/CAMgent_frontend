@@ -12,7 +12,7 @@ class CameraScreen extends StatefulWidget {
     Key? key,
     this.cameraSettings,
     this.onBackToChat,
-  }) : super(key: key);   
+  }) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -63,6 +63,7 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
+  // 슬라이드 동작
   Future<void> _setZoom(double v) async {
     setState(() => _zoom = v);
     await _channel?.invokeMethod('setZoom', {'zoom': v});
@@ -74,6 +75,7 @@ class _CameraScreenState extends State<CameraScreen> {
         ?.invokeMethod('setExposureCompensation', {'exposure': v});
   }
 
+  // 촬영 버튼
   Future<void> _takePicture() async {
     if (_channel == null || _isTakingPicture) return;
     setState(() => _isTakingPicture = true);
