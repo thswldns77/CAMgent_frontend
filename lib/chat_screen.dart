@@ -1,4 +1,3 @@
-// lib/chat_screen.dart
 
 import 'dart:typed_data';
 
@@ -54,22 +53,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
     _scrollToBottom();
 
-    // 2) Mock 카메라 설정이나 Agentica 호출 결정
+    // 2) Agentica 호출
     _processUserInput(text: text, imagePath: imagePath);
   }
 
-  // 사용자 입력 처리 함수 (Mock과 실제 API 호출을 구분)
   Future<void> _processUserInput({
     required String text,
     String? imagePath,
   }) async {
     setState(() => _isTyping = true);
-
     try {
-
-      // Mock 설정이 없거나 이미지가 있는 경우 실제 API 호출
       await _sendToAgentica(text: text, imagePath: imagePath);
-
     } catch (e) {
       print('사용자 입력 처리 오류: $e');
       _addBotMessage(
@@ -82,7 +76,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-  // _sendToAgentica 함수 개선
   Future<void> _sendToAgentica({
     required String text,
     String? imagePath,
@@ -156,7 +149,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   void _addWelcomeMessage() {
     _messages.add(ChatMessage(
-      text: "안녕하세요! 📸 스마트 카메라 어시스턴트입니다.\n\n어떤 사진을 찍고 싶으신가요? 예를 들어:\n• \"인물 사진을 찍고 싶어\"\n• \"야경 촬영 설정 알려줘\"\n• \"접사 사진 찍는 법\"\n• \"운동하는 모습 찍기\"\n• \"밝게 찍고 싶어\"\n• \"어둡게 찍고 싶어\"\n\n또는 사진을 첨부해서 이런 사진을 찍고 싶다고 알려주세요! 📷",
+      text: "안녕하세요!\n\n 카메라 어시스턴트, CAMgent입니다.",
       isUser: false,
       timestamp: DateTime.now(),
     ));
@@ -614,7 +607,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 child: TextField(
                   controller: _textController,
                   decoration: InputDecoration(
-                    hintText: '어떤 사진을 찍고 싶으신가요?',
+                    hintText: '무엇을 도와드릴까요?',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,

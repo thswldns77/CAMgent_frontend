@@ -1,4 +1,3 @@
-// lib/camera_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,7 +22,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isTakingPicture = false;
   double _zoom = 1.0;
   double _exposure = 0.0;
-  // 예시 범위, 필요에 따라 cameraManager 에서 실제 범위 가져와 세팅하세요
+
   final double _minZoom = 1.0, _maxZoom = 4.0;
   final double _minExposure = -2.0, _maxExposure = 2.0;
 

@@ -1,4 +1,3 @@
-// lib/camera_settings.dart
 
 /// 카메라 세팅 모델
 class CameraSettings {

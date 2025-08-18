@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '요구사항 & 네이티브 카메라2',
+      title: 'CAMgent',
       theme: ThemeData(useMaterial3: true),
       home: const PermissionGate(),
       debugShowCheckedModeBanner: false,
@@ -171,78 +171,29 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   CameraSettings? _cameraSettings;
 
-  late final ChatScreen _chat;
-  // 카메라는 세팅이 바뀔 수 있으니 빌더로 감싸서 재build만
-  late final Widget _cameraBuilder;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _chat = ChatScreen(
-      onSettingsReceived: (s) {
-        setState(() {
-          _cameraSettings = s;
-          _currentIndex = 1; // 카메라 탭으로 전환
-        });
-      },
-    );
-
-    _cameraBuilder = _CameraHolder(
-      getSettings: () => _cameraSettings,
-      onBackToChat: () => setState(() => _currentIndex = 0),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _chat,
-          _cameraBuilder,
-        ],
+      body: _currentIndex == 0
+          ? ChatScreen(onSettingsReceived: (s) {
+        setState(() {
+          _cameraSettings = s;
+          _currentIndex = 1;
+        });
+      })
+          : CameraScreen(
+        cameraSettings: _cameraSettings,
+        onBackToChat: () => setState(() => _currentIndex = 0),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '요구사항'),
-          BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: '카메라2'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '어시스턴트'),
+          BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: '카메라'),
         ],
       ),
     );
   }
-}
 
-/// CameraScreen을 재사용하면서 settings만 최신으로 주입하기 위한 래퍼
-class _CameraHolder extends StatefulWidget {
-  final CameraSettings? Function() getSettings;
-  final VoidCallback onBackToChat;
-
-  const _CameraHolder({
-    Key? key,
-    required this.getSettings,
-    required this.onBackToChat,
-  }) : super(key: key);
-
-  @override
-  State<_CameraHolder> createState() => _CameraHolderState();
-}
-
-class _CameraHolderState extends State<_CameraHolder>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true; // 카메라 측 상태도 유지
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return CameraScreen(
-      cameraSettings: widget.getSettings(),
-      onBackToChat: widget.onBackToChat,
-    );
-    // CameraScreen 내부에서 didUpdateWidget으로 settings 변화 대응 가능
-  }
 }
