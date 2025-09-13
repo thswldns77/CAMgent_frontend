@@ -170,24 +170,63 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   CameraSettings? _cameraSettings;
+  int _cameraEpoch = 0; // 카메라 재생성용 카운터
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     body: _currentIndex == 0
+  //         ? ChatScreen(onSettingsReceived: (s) {
+  //       setState(() {
+  //         _cameraSettings = s;
+  //         _currentIndex = 1;
+  //       });
+  //     })
+  //         : CameraScreen(
+  //       cameraSettings: _cameraSettings,
+  //       onBackToChat: () => setState(() => _currentIndex = 0),
+  //     ),
+  //     bottomNavigationBar: BottomNavigationBar(
+  //       currentIndex: _currentIndex,
+  //       onTap: (i) => setState(() => _currentIndex = i),
+  //       items: const [
+  //         BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '어시스턴트'),
+  //         BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: '카메라'),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentIndex == 0
-          ? ChatScreen(onSettingsReceived: (s) {
-        setState(() {
-          _cameraSettings = s;
-          _currentIndex = 1;
-        });
-      })
-          : CameraScreen(
-        cameraSettings: _cameraSettings,
-        onBackToChat: () => setState(() => _currentIndex = 0),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          ChatScreen(
+            onSettingsReceived: (s) {
+              setState(() {
+                _cameraSettings = s;
+                _cameraEpoch++;        // 다음에 카메라 보여줄 때 재생성
+                _currentIndex = 1; // 카메라 탭으로 전환
+              });
+            },
+          ),
+          CameraScreen(
+            key: ValueKey(_cameraEpoch), // 카메라 재생성용 카운터
+            isActive: _currentIndex == 1, // 보일땨만 true
+            cameraSettings: _cameraSettings,
+            onBackToChat: () => setState(() => _currentIndex = 0),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: (i) {
+          setState(() {
+            if (i == 1) _cameraEpoch++; // 카메라 탭 이동 시 재생성
+            _currentIndex = i;
+          });
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '어시스턴트'),
           BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: '카메라'),
@@ -195,5 +234,4 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-
 }

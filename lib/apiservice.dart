@@ -30,7 +30,7 @@ class ApiResponse {
 
 // ApiService 클래스 개선
 class ApiService {
-  static const String apiUrl = 'http://ip주소:포트번호/agent-conversation';
+  static const String apiUrl = 'http://192.168.0.6:9877/agent-conversation';
 
   static Future<ApiResponse> sendToAgentica(String text, String? imagePath) async {
     try {

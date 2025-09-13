@@ -133,11 +133,8 @@ public class NativeCameraView implements PlatformView, MethodChannel.MethodCallH
         }
     }
     private void pauseCamera() {
-        // 미리 리스너 해제해서 추가 콜백 방지
-        if (imageReader != null) {
-            imageReader.setOnImageAvailableListener(null, null);
-        }
-        // 세션 정지
+
+        // 1) 캡처 반복 중지
         try {
             if (captureSession != null) {
                 captureSession.stopRepeating();
@@ -145,7 +142,42 @@ public class NativeCameraView implements PlatformView, MethodChannel.MethodCallH
             }
         } catch (Exception ignore) {}
 
-        closeCamera();        // 기존 closeCamera 호출
+        // 미리 리스너 해제해서 추가 콜백 방지
+        // 2) ImageReader 리스너 해제 + 큐 드레인 + 닫기
+        if (imageReader != null) {
+            // 더 이상 새 콜백 안 오게
+            imageReader.setOnImageAvailableListener(null, null);
+
+
+            // 큐에 남은 이미지 전부 닫기 (버퍼 반환)
+            try {
+                while (true) {
+                    Image img = imageReader.acquireLatestImage();
+                    if (img == null) break;
+                    img.close();
+                }
+            } catch (Exception ignore) {}
+
+            try {
+                imageReader.close();
+            } catch (Exception ignore) {}
+
+        }
+        // 3) 카메라 디바이스/세션 정리
+        try {
+            if (captureSession != null) {
+                captureSession.close();
+            }
+        } catch (Exception ignore) {}
+        captureSession = null;
+
+        try {
+            if (cameraDevice != null) {
+                cameraDevice.close();
+            }
+        } catch (Exception ignore) {}
+        cameraDevice = null;
+
         stopBackgroundThread(); // 백그라운드 스레드도 같이 종료 (재진입시 다시 start)
     }
 

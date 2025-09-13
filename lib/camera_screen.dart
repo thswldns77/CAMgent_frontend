@@ -7,8 +7,11 @@ import 'camera_settings.dart';
 class CameraScreen extends StatefulWidget {
   final CameraSettings? cameraSettings;
   final VoidCallback? onBackToChat;
+  final bool isActive;
+
   const CameraScreen({
     Key? key,
+    required this.isActive,
     this.cameraSettings,
     this.onBackToChat,
   }) : super(key: key);
@@ -34,13 +37,27 @@ class _CameraScreenState extends State<CameraScreen> {
       debugPrint('[Flutter→Native] applySettings (update): $map'); // ★ 로그
       _channel!.invokeMethod('applySettings', map);
     }
+
+    // 보이는 → 숨김 전환일 때만 pause 호출
+    if (old.isActive && !widget.isActive) {
+      _pause();
+    }
   }
+
+
+  Future<void> _pause() async {
+    if (_channel != null) {
+      await _channel!.invokeMethod('pauseCamera');
+    }
+  }
+
   @override
   void dispose() {
     // 네이티브 쪽 카메라/스레드/리스너 정리
     _channel?.invokeMethod('pauseCamera');
     super.dispose();
   }
+
 
 
   void _onPlatformViewCreated(int id) {

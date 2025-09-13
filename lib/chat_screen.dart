@@ -64,6 +64,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     setState(() => _isTyping = true);
     try {
       await _sendToAgentica(text: text, imagePath: imagePath);
+      // _addBotMessage(
+      //   text: "테스트 중",
+      // );
     } catch (e) {
       print('사용자 입력 처리 오류: $e');
       _addBotMessage(
@@ -333,13 +336,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // 텍스트 메시지 제출 핸들러
   void _handleSubmitted(String text) {
-    if (text.trim().isEmpty) return;
+    final trimmed = text.trim();
+    final hasImage = _pendingImagePath != null;
+    // ✅ 텍스트도 없고 이미지도 없을 때만 막기
+    if (trimmed.isEmpty && !hasImage) return;
 
     // 텍스트와 이미지(있다면) 함께 전송
     _sendMessage(text: text.trim(), imagePath: _pendingImagePath);
 
     _textController.clear();
-
     // 이미지 초기화
     setState(() {
       _pendingImagePath = null;
@@ -371,20 +376,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     return _buildMessageBubble(_messages[index]);
                   },
                 ),
+
+                if (_isTyping)
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Container(
+                      color: Colors.transparent, // 필요시 배경 제거/유지
+                      child: _buildTypingIndicator(),
+                    ),
+                  ),
                 // 타이핑 인디케이터
               ],
             ),
           ),
-          if (_isTyping)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                color: Colors.white,
-                child: _buildTypingIndicator(),
-              ),
-            ),
+
           _buildInputArea(),
         ],
       ),
@@ -673,34 +678,36 @@ class YouTubePlayerItem extends StatefulWidget {
 }
 
 class _YouTubePlayerItemState extends State<YouTubePlayerItem> {
-  late YoutubePlayerController _ytController;
+  late YoutubePlayerController? _ytController;
+  late final String _videoId;
 
   @override
   void initState() {
     super.initState();
-    final videoId = YoutubePlayer.convertUrlToId(widget.youtubeUrl) ?? '';
-    _ytController = YoutubePlayerController(
-      initialVideoId: videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: false,
-        mute: false,
-      ),
-    );
+    _videoId = YoutubePlayer.convertUrlToId(widget.youtubeUrl) ?? '';
+    if (_videoId.isNotEmpty) {
+      _ytController = YoutubePlayerController(
+        initialVideoId: _videoId,
+        flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _ytController.dispose();
+    _ytController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_videoId.isEmpty || _ytController == null) {
+      return const SizedBox.shrink(); // 또는 에러 메시지 UI
+    }
     return YoutubePlayer(
-      controller: _ytController,
+      controller: _ytController!,
       showVideoProgressIndicator: true,
       progressIndicatorColor: Theme.of(context).colorScheme.primary,
-      onReady: () { /* 필요시 콜백 */ },
     );
   }
 }
